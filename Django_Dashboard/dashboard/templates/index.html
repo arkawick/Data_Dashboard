@@ -1,0 +1,384 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Projects · Tests · Bugs</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        body { font-family: Arial, sans-serif; background-image: url('https://static.vecteezy.com/system/resources/previews/024/435/050/large_2x/technologic-linear-background-with-dots-and-lines-in-the-style-of-dark-teal-and-dark-sky-blue-human-connections-32k-uhd-neo-academism-generat-ai-free-photo.jpg'); background-size: cover; background-position: center; margin: 0; padding: 0; }
+        main { width: 94%; margin: 20px auto; background: rgba(255,255,255,0.93); padding: 20px; box-shadow: 0 0 12px rgba(0,0,0,0.15); border-radius: 10px; }
+        h1, h2 { color: #007BFF; }
+        h2 { border-bottom: 2px solid #007BFF; padding-bottom: 6px; margin-top: 40px; }
+        fieldset { border: 1px solid #ccc; padding: 12px; margin-bottom: 20px; border-radius: 6px; }
+        legend { font-weight: bold; color: #007BFF; }
+        label { display: inline-block; width: 140px; margin-bottom: 8px; font-size: 0.9em; }
+        select, input[type="date"], input[type="submit"] { padding: 5px 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="submit"] { background: #007BFF; color: #fff; border: none; cursor: pointer; padding: 6px 18px; }
+        input[type="submit"]:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.88em; }
+        th, td { border: 1px solid #ddd; padding: 7px 10px; text-align: left; word-wrap: break-word; }
+        th { background: #f2f2f2; cursor: pointer; position: relative; white-space: nowrap; }
+        th .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; user-select: none; }
+        tr:hover td { background: #f9f9ff; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        .badge-pass    { background: #d4edda; color: #155724; }
+        .badge-fail    { background: #f8d7da; color: #721c24; }
+        .badge-warn    { background: #fff3cd; color: #856404; }
+        .badge-skip    { background: #e2e3e5; color: #383d41; }
+        .badge-pending { background: #cce5ff; color: #004085; }
+        .badge-crit    { background: #f8d7da; color: #721c24; }
+        .badge-major   { background: #ffeeba; color: #856404; }
+        .badge-minor   { background: #d1ecf1; color: #0c5460; }
+        .badge-trivial { background: #e2e3e5; color: #383d41; }
+        .stats-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+        .stat-box { background: #f0f4ff; border: 1px solid #c8d8ff; border-radius: 8px; padding: 8px 16px; text-align: center; min-width: 90px; }
+        .stat-box .num { font-size: 1.5em; font-weight: bold; color: #007BFF; }
+        .stat-box .lbl { font-size: 0.75em; color: #555; }
+        .search-bar { width: 100%; max-width: 400px; padding: 7px 12px; border: 1px solid #ccc; border-radius: 20px; margin-bottom: 12px; font-size: 0.9em; }
+        .export-btn { background: #28a745; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-left: 8px; }
+        .export-btn:hover { background: #1e7e34; }
+        .pagination { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+        .pagination button { padding: 4px 12px; border: 1px solid #007BFF; background: #fff; color: #007BFF; border-radius: 4px; cursor: pointer; }
+        .pagination button.active { background: #007BFF; color: #fff; }
+        .section-summary { font-size: 0.9em; color: #555; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Projects · Test Cases · Bugs</h1>
+    <p style="color:#555; font-size:0.9em;">Graph-linked data: Projects → TestCases → Bugs | Common keys: project_id, test_case_id, domain, team, git_hash</p>
+
+    <!-- ── Filters ─────────────────────────────────────────────────────────── -->
+    <form method="GET">
+        <fieldset>
+            <legend>Filters</legend>
+            <label>Domain:</label>
+            <select name="domain">
+                <option value="">-- All --</option>
+                {% for d in domain_options %}<option value="{{ d }}" {% if filter_criteria.domain == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+            </select>
+
+            <label>Team:</label>
+            <select name="team">
+                <option value="">-- All --</option>
+                {% for t in team_options %}<option value="{{ t }}" {% if filter_criteria.team == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+            </select>
+
+            <label>TC Status:</label>
+            <select name="status">
+                <option value="">-- All --</option>
+                {% for s in status_options %}<option value="{{ s }}" {% if filter_criteria.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+
+            <label>Bug Priority:</label>
+            <select name="priority">
+                <option value="">-- All --</option>
+                {% for p in priority_options %}<option value="{{ p }}" {% if filter_criteria.priority == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+
+            <label>Project:</label>
+            <select name="project_name">
+                <option value="">-- All --</option>
+                {% for p in project_options %}<option value="{{ p }}" {% if filter_criteria.project_name == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+
+            <br>
+            <label>Date From:</label>
+            <input type="date" name="start_date" value="{{ filter_criteria.start_date }}">
+            <label>Date To:</label>
+            <input type="date" name="end_date" value="{{ filter_criteria.end_date }}">
+            <input type="submit" value="Apply">
+            <a href="{% url 'index' %}" style="margin-left:10px; color:#007BFF; font-size:0.9em;">Clear</a>
+        </fieldset>
+    </form>
+
+    <!-- ── Projects ────────────────────────────────────────────────────────── -->
+    <h2>Projects <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ projects|length }} records)</span></h2>
+    <div class="stats-row">
+        {% for s, c in proj_status_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">{{ s }}</div></div>
+        {% endfor %}
+    </div>
+    <input class="search-bar" type="text" id="proj-search" placeholder="Search projects..." onkeyup="filterTable('proj-table','proj-search')">
+    <button class="export-btn" onclick="exportTableToCSV('proj-table','projects.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="proj-table">
+        <thead><tr>
+            <th onclick="sortTable('proj-table',0)">Project ID<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',1)">Name<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',2)">Domain<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',3)">Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',4)">Priority<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',5)">Team<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',6)">Lead<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',7)">Tech Stack<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',8)">Git Hash<span class="resize-handle"></span></th>
+            <th onclick="sortTable('proj-table',9)">Date<span class="resize-handle"></span></th>
+        </tr></thead>
+        <tbody>
+        {% for p in projects %}
+        <tr>
+            <td>{{ p.project_id }}</td>
+            <td>{{ p.project_name }}</td>
+            <td>{{ p.domain }}</td>
+            <td>{{ p.status }}</td>
+            <td>{{ p.priority }}</td>
+            <td>{{ p.team }}</td>
+            <td>{{ p.lead_name }}</td>
+            <td>{{ p.tech_stack }}</td>
+            <td><code>{{ p.git_hash }}</code></td>
+            <td>{{ p.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- ── Test Cases ───────────────────────────────────────────────────────── -->
+    <h2>Test Cases <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ test_cases|length }} records)</span></h2>
+    <div class="stats-row">
+        {% for s, c in tc_status_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">{{ s }}</div></div>
+        {% endfor %}
+    </div>
+    <input class="search-bar" type="text" id="tc-search" placeholder="Search test cases..." onkeyup="filterTable('tc-table','tc-search')">
+    <button class="export-btn" onclick="exportTableToCSV('tc-table','test_cases.csv')">Export CSV</button>
+    <div style="overflow-x:auto;" id="tc-container">
+    <table id="tc-table">
+        <thead><tr>
+            <th onclick="sortTable('tc-table',0)">TC ID<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',1)">Name<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',2)">Domain<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',3)">Project<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',4)">Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',5)">Type<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',6)">Automation<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',7)">Assigned To<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',8)">Team<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',9)">Parent Folder<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',10)">Git Hash<span class="resize-handle"></span></th>
+            <th onclick="sortTable('tc-table',11)">Date<span class="resize-handle"></span></th>
+        </tr></thead>
+        <tbody id="tc-tbody">
+        {% for tc in test_cases %}
+        <tr>
+            <td>{{ tc.test_case_id }}</td>
+            <td>{{ tc.test_case_name }}</td>
+            <td>{{ tc.domain }}</td>
+            <td>{{ tc.project_name }}</td>
+            <td>
+                {% if tc.status == "Passed" %}<span class="badge badge-pass">{{ tc.status }}</span>
+                {% elif tc.status == "Failed" %}<span class="badge badge-fail">{{ tc.status }}</span>
+                {% elif tc.status == "Blocked" %}<span class="badge badge-warn">{{ tc.status }}</span>
+                {% elif tc.status == "Skipped" %}<span class="badge badge-skip">{{ tc.status }}</span>
+                {% else %}<span class="badge badge-pending">{{ tc.status }}</span>{% endif %}
+            </td>
+            <td>{{ tc.test_type }}</td>
+            <td>{{ tc.automation_status }}</td>
+            <td>{{ tc.assigned_to_name }}</td>
+            <td>{{ tc.team }}</td>
+            <td>{{ tc.parent_folder }}</td>
+            <td><code>{{ tc.git_hash }}</code></td>
+            <td>{{ tc.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <div class="pagination" id="tc-pagination"></div>
+
+    <!-- ── Bugs ─────────────────────────────────────────────────────────────── -->
+    <h2>Bugs <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ bugs|length }} records)</span></h2>
+    <div class="stats-row">
+        {% for s, c in bug_sev_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">{{ s }}</div></div>
+        {% endfor %}
+        &nbsp;|&nbsp;
+        {% for s, c in bug_status_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">{{ s }}</div></div>
+        {% endfor %}
+    </div>
+    <input class="search-bar" type="text" id="bug-search" placeholder="Search bugs..." onkeyup="filterTable('bug-table','bug-search')">
+    <button class="export-btn" onclick="exportTableToCSV('bug-table','bugs.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="bug-table">
+        <thead><tr>
+            <th onclick="sortTable('bug-table',0)">Bug ID<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',1)">Title<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',2)">Severity<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',3)">Priority<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',4)">Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',5)">Type<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',6)">Project<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',7)">Test Case<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',8)">Reporter<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',9)">Assignee<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',10)">Domain<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',11)">Team<span class="resize-handle"></span></th>
+            <th onclick="sortTable('bug-table',12)">Date<span class="resize-handle"></span></th>
+        </tr></thead>
+        <tbody id="bug-tbody">
+        {% for b in bugs %}
+        <tr>
+            <td>{{ b.bug_id }}</td>
+            <td>{{ b.title }}</td>
+            <td>
+                {% if b.severity == "Critical" %}<span class="badge badge-crit">{{ b.severity }}</span>
+                {% elif b.severity == "Major" %}<span class="badge badge-major">{{ b.severity }}</span>
+                {% elif b.severity == "Minor" %}<span class="badge badge-minor">{{ b.severity }}</span>
+                {% else %}<span class="badge badge-trivial">{{ b.severity }}</span>{% endif %}
+            </td>
+            <td>{{ b.priority }}</td>
+            <td>{{ b.status }}</td>
+            <td>{{ b.bug_type }}</td>
+            <td>{{ b.project_name }}</td>
+            <td>{{ b.test_case_name }}</td>
+            <td>{{ b.reporter_name }}</td>
+            <td>{{ b.assignee_name }}</td>
+            <td>{{ b.domain }}</td>
+            <td>{{ b.team }}</td>
+            <td>{{ b.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <div class="pagination" id="bug-pagination"></div>
+
+    <!-- ── Joined: Projects ↔ Test Cases ─────────────────────────────────── -->
+    <h2>Joined: Projects ↔ Test Cases
+        <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ proj_tc_matched|length }} matched via project_id)</span>
+    </h2>
+    <p class="section-summary">Graph edge: <code>(Project)-[:HAS_TEST_CASE]->(TestCase)</code> matched on <code>project_id</code></p>
+    <input class="search-bar" type="text" id="ptc-search" placeholder="Search..." onkeyup="filterTable('ptc-table','ptc-search')">
+    <button class="export-btn" onclick="exportTableToCSV('ptc-table','proj_tc_matched.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="ptc-table">
+        <thead><tr>
+            <th>TC ID</th><th>Test Case Name</th><th>TC Status</th><th>Test Type</th>
+            <th>Automation</th><th>Assigned To</th>
+            <th>Project ID</th><th>Project Name</th><th>Proj Status</th><th>Priority</th>
+            <th>Domain</th><th>Team</th><th>Git Hash</th><th>Date</th>
+        </tr></thead>
+        <tbody>
+        {% for r in proj_tc_matched %}
+        <tr>
+            <td>{{ r.test_case_id }}</td>
+            <td>{{ r.test_case_name }}</td>
+            <td>{{ r.tc_status }}</td>
+            <td>{{ r.test_type }}</td>
+            <td>{{ r.automation_status }}</td>
+            <td>{{ r.assigned_to_name }}</td>
+            <td>{{ r.project_id }}</td>
+            <td>{{ r.project_name }}</td>
+            <td>{{ r.proj_status }}</td>
+            <td>{{ r.proj_priority }}</td>
+            <td>{{ r.domain }}</td>
+            <td>{{ r.team }}</td>
+            <td><code>{{ r.git_hash }}</code></td>
+            <td>{{ r.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- ── Joined: Test Cases ↔ Bugs ────────────────────────────────────── -->
+    <h2>Joined: Test Cases ↔ Bugs
+        <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ tc_bug_matched|length }} matched via test_case_id)</span>
+    </h2>
+    <p class="section-summary">Graph edge: <code>(TestCase)-[:FOUND_BUG]->(Bug)</code> matched on <code>test_case_id</code></p>
+    <input class="search-bar" type="text" id="tcb-search" placeholder="Search..." onkeyup="filterTable('tcb-table','tcb-search')">
+    <button class="export-btn" onclick="exportTableToCSV('tcb-table','tc_bug_matched.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="tcb-table">
+        <thead><tr>
+            <th>Bug ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Bug Status</th><th>Type</th>
+            <th>Assignee</th><th>Reporter</th>
+            <th>TC ID</th><th>Test Case Name</th><th>TC Status</th>
+            <th>Project</th><th>Domain</th><th>Team</th><th>Git Hash</th><th>Date</th>
+        </tr></thead>
+        <tbody>
+        {% for r in tc_bug_matched %}
+        <tr>
+            <td>{{ r.bug_id }}</td>
+            <td>{{ r.title }}</td>
+            <td>{{ r.severity }}</td>
+            <td>{{ r.bug_priority }}</td>
+            <td>{{ r.bug_status }}</td>
+            <td>{{ r.bug_type }}</td>
+            <td>{{ r.assignee_name }}</td>
+            <td>{{ r.reporter_name }}</td>
+            <td>{{ r.test_case_id }}</td>
+            <td>{{ r.test_case_name }}</td>
+            <td>{{ r.tc_status }}</td>
+            <td>{{ r.project_name }}</td>
+            <td>{{ r.domain }}</td>
+            <td>{{ r.team }}</td>
+            <td><code>{{ r.git_hash }}</code></td>
+            <td>{{ r.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+</main>
+
+<script>
+// Sort table by column index
+const sortState = {};
+function sortTable(tableId, col) {
+    const table = document.getElementById(tableId);
+    const tbody = table.tBodies[0];
+    const rows  = Array.from(tbody.rows);
+    const asc   = !sortState[tableId + col];
+    sortState[tableId + col] = asc;
+    rows.sort((a, b) => {
+        const va = a.cells[col]?.innerText.trim() || '';
+        const vb = b.cells[col]?.innerText.trim() || '';
+        const na = parseFloat(va), nb = parseFloat(vb);
+        if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+
+// Live search/filter on visible rows
+function filterTable(tableId, searchId) {
+    const q    = document.getElementById(searchId).value.toLowerCase();
+    const rows = document.getElementById(tableId).tBodies[0].rows;
+    for (const row of rows) {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    }
+}
+
+// CSV export
+function exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    const rows  = Array.from(table.rows);
+    const csv   = rows.map(r =>
+        Array.from(r.cells).map(c => '"' + c.innerText.replace(/"/g, '""') + '"').join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+// Column resize
+document.querySelectorAll('.resize-handle').forEach(handle => {
+    handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const th = handle.parentElement;
+        const startX = e.pageX, startW = th.offsetWidth;
+        const onMove = mv => { th.style.width = Math.max(50, startW + mv.pageX - startX) + 'px'; };
+        const onUp   = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Requirements · Employees</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        body { font-family: Arial, sans-serif; background-image: url('https://static.vecteezy.com/system/resources/previews/024/435/050/large_2x/technologic-linear-background-with-dots-and-lines-in-the-style-of-dark-teal-and-dark-sky-blue-human-connections-32k-uhd-neo-academism-generat-ai-free-photo.jpg'); background-size: cover; background-position: center; margin: 0; padding: 0; }
+        main { width: 94%; margin: 20px auto; background: rgba(255,255,255,0.93); padding: 20px; box-shadow: 0 0 12px rgba(0,0,0,0.15); border-radius: 10px; }
+        h1, h2 { color: #007BFF; }
+        h2 { border-bottom: 2px solid #007BFF; padding-bottom: 6px; margin-top: 40px; }
+        fieldset { border: 1px solid #ccc; padding: 12px; margin-bottom: 20px; border-radius: 6px; }
+        legend { font-weight: bold; color: #007BFF; }
+        label { display: inline-block; width: 130px; margin-bottom: 8px; font-size: 0.9em; }
+        select, input[type="date"], input[type="submit"] { padding: 5px 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="submit"] { background: #007BFF; color: #fff; border: none; cursor: pointer; padding: 6px 18px; }
+        input[type="submit"]:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.88em; }
+        th, td { border: 1px solid #ddd; padding: 7px 10px; text-align: left; word-wrap: break-word; }
+        th { background: #f2f2f2; cursor: pointer; position: relative; white-space: nowrap; }
+        th .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; user-select: none; }
+        tr:hover td { background: #f9f9ff; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        .badge-approved    { background: #d4edda; color: #155724; }
+        .badge-implemented { background: #cce5ff; color: #004085; }
+        .badge-draft       { background: #fff3cd; color: #856404; }
+        .badge-review      { background: #d1ecf1; color: #0c5460; }
+        .badge-rejected    { background: #f8d7da; color: #721c24; }
+        .badge-active      { background: #d4edda; color: #155724; }
+        .badge-inactive    { background: #e2e3e5; color: #383d41; }
+        .badge-deleted     { background: #f8d7da; color: #721c24; }
+        .stats-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
+        .stat-box { background: #f0f4ff; border: 1px solid #c8d8ff; border-radius: 8px; padding: 8px 16px; text-align: center; min-width: 90px; }
+        .stat-box .num { font-size: 1.5em; font-weight: bold; color: #007BFF; }
+        .stat-box .lbl { font-size: 0.75em; color: #555; }
+        .search-bar { width: 100%; max-width: 400px; padding: 7px 12px; border: 1px solid #ccc; border-radius: 20px; margin-bottom: 12px; font-size: 0.9em; }
+        .export-btn { background: #28a745; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-left: 8px; }
+        .export-btn:hover { background: #1e7e34; }
+        .section-summary { font-size: 0.9em; color: #555; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Requirements · Employees</h1>
+    <p style="color:#555; font-size:0.9em;">Graph-linked data: Requirements → Employees | Common keys: project_id, verifier_employee_id, team, domain</p>
+
+    <!-- ── Filters ─────────────────────────────────────────────────────────── -->
+    <form method="GET">
+        <fieldset>
+            <legend>Filters</legend>
+            <label>Domain:</label>
+            <select name="domain">
+                <option value="">-- All --</option>
+                {% for d in domain_options %}<option value="{{ d }}" {% if filter_criteria.domain == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+            </select>
+
+            <label>Team:</label>
+            <select name="team">
+                <option value="">-- All --</option>
+                {% for t in team_options %}<option value="{{ t }}" {% if filter_criteria.team == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+            </select>
+
+            <label>Category:</label>
+            <select name="category">
+                <option value="">-- All --</option>
+                {% for c in category_options %}<option value="{{ c }}" {% if filter_criteria.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+            </select>
+
+            <label>Priority:</label>
+            <select name="priority">
+                <option value="">-- All --</option>
+                {% for p in priority_options %}<option value="{{ p }}" {% if filter_criteria.priority == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+
+            <label>Status:</label>
+            <select name="status">
+                <option value="">-- All --</option>
+                {% for s in status_options %}<option value="{{ s }}" {% if filter_criteria.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+
+            <label>Department:</label>
+            <select name="department">
+                <option value="">-- All --</option>
+                {% for d in dept_options %}<option value="{{ d }}" {% if filter_criteria.department == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+            </select>
+
+            <label>Seniority:</label>
+            <select name="seniority">
+                <option value="">-- All --</option>
+                {% for s in seniority_options %}<option value="{{ s }}" {% if filter_criteria.seniority == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+
+            <br>
+            <label>Date From:</label>
+            <input type="date" name="start_date" value="{{ filter_criteria.start_date }}">
+            <label>Date To:</label>
+            <input type="date" name="end_date" value="{{ filter_criteria.end_date }}">
+            <input type="submit" value="Apply">
+            <a href="{% url 'index2' %}" style="margin-left:10px; color:#007BFF; font-size:0.9em;">Clear</a>
+        </fieldset>
+    </form>
+
+    <!-- ── Requirements ─────────────────────────────────────────────────── -->
+    <h2>Requirements <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ requirements|length }} records)</span></h2>
+    <div class="stats-row">
+        {% for s, c in req_status_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">{{ s }}</div></div>
+        {% endfor %}
+        &nbsp;|&nbsp;
+        {% for s, c in db_status_counts.items %}
+        <div class="stat-box"><div class="num">{{ c }}</div><div class="lbl">db: {{ s }}</div></div>
+        {% endfor %}
+    </div>
+    <input class="search-bar" type="text" id="req-search" placeholder="Search requirements..." onkeyup="filterTable('req-table','req-search')">
+    <button class="export-btn" onclick="exportTableToCSV('req-table','requirements.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="req-table">
+        <thead><tr>
+            <th onclick="sortTable('req-table',0)">Req ID<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',1)">Requirement Name<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',2)">Domain<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',3)">Category<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',4)">Priority<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',5)">Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',6)">Project<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',7)">Verifier<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',8)">Covered By TC<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',9)">Team<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',10)">DB Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('req-table',11)">Date<span class="resize-handle"></span></th>
+        </tr></thead>
+        <tbody>
+        {% for r in requirements %}
+        <tr>
+            <td>{{ r.requirement_id }}</td>
+            <td>{{ r.requirement_name }}</td>
+            <td>{{ r.domain }}</td>
+            <td>{{ r.category }}</td>
+            <td>{{ r.priority }}</td>
+            <td>
+                {% if r.status == "Approved" %}<span class="badge badge-approved">{{ r.status }}</span>
+                {% elif r.status == "Implemented" %}<span class="badge badge-implemented">{{ r.status }}</span>
+                {% elif r.status == "Draft" %}<span class="badge badge-draft">{{ r.status }}</span>
+                {% elif r.status == "Under Review" %}<span class="badge badge-review">{{ r.status }}</span>
+                {% else %}<span class="badge badge-rejected">{{ r.status }}</span>{% endif %}
+            </td>
+            <td>{{ r.project_name }}</td>
+            <td>{{ r.verification_responsibility }}</td>
+            <td>{{ r.covered_by_test_case_name }}</td>
+            <td>{{ r.team }}</td>
+            <td>
+                {% if r.db_status == "active" %}<span class="badge badge-active">{{ r.db_status }}</span>
+                {% elif r.db_status == "deleted" %}<span class="badge badge-deleted">{{ r.db_status }}</span>
+                {% else %}<span class="badge badge-inactive">{{ r.db_status }}</span>{% endif %}
+            </td>
+            <td>{{ r.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- ── Employees ─────────────────────────────────────────────────────── -->
+    <h2>Employees <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ employees|length }} records)</span></h2>
+    <div class="stats-row">
+        {% for dept, cnt in emp_dept_counts.items %}
+        <div class="stat-box"><div class="num">{{ cnt }}</div><div class="lbl">{{ dept }}</div></div>
+        {% endfor %}
+    </div>
+    <input class="search-bar" type="text" id="emp-search" placeholder="Search employees..." onkeyup="filterTable('emp-table','emp-search')">
+    <button class="export-btn" onclick="exportTableToCSV('emp-table','employees.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="emp-table">
+        <thead><tr>
+            <th onclick="sortTable('emp-table',0)">Employee ID<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',1)">Name<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',2)">Email<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',3)">Department<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',4)">Role<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',5)">Team<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',6)">Location<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',7)">Seniority<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',8)">Skills<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',9)">DB Status<span class="resize-handle"></span></th>
+            <th onclick="sortTable('emp-table',10)">Date<span class="resize-handle"></span></th>
+        </tr></thead>
+        <tbody>
+        {% for e in employees %}
+        <tr>
+            <td>{{ e.employee_id }}</td>
+            <td>{{ e.name }}</td>
+            <td>{{ e.email }}</td>
+            <td>{{ e.department }}</td>
+            <td>{{ e.role }}</td>
+            <td>{{ e.team }}</td>
+            <td>{{ e.location }}</td>
+            <td>{{ e.seniority }}</td>
+            <td>{{ e.skills }}</td>
+            <td>
+                {% if e.db_status == "active" %}<span class="badge badge-active">{{ e.db_status }}</span>
+                {% else %}<span class="badge badge-inactive">{{ e.db_status }}</span>{% endif %}
+            </td>
+            <td>{{ e.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- ── Joined: Requirements ↔ Employees ─────────────────────────────── -->
+    <h2>Joined: Requirements ↔ Employees
+        <span style="font-size:0.6em; font-weight:normal; color:#555;">({{ req_emp_matched|length }} matched via verifier_employee_id)</span>
+    </h2>
+    <p class="section-summary">Graph edge: <code>(Employee)-[:RESPONSIBLE_FOR]->(Requirement)</code> matched on <code>verifier_employee_id → employee_id</code></p>
+    <input class="search-bar" type="text" id="re-search" placeholder="Search..." onkeyup="filterTable('re-table','re-search')">
+    <button class="export-btn" onclick="exportTableToCSV('re-table','req_emp_matched.csv')">Export CSV</button>
+    <div style="overflow-x:auto;">
+    <table id="re-table">
+        <thead><tr>
+            <th>Req ID</th><th>Requirement Name</th><th>Req Status</th><th>Category</th>
+            <th>Priority</th><th>Project</th><th>Domain</th><th>Team</th><th>Covered By TC</th>
+            <th>Employee ID</th><th>Employee Name</th><th>Role</th><th>Department</th><th>Seniority</th>
+            <th>Date</th>
+        </tr></thead>
+        <tbody>
+        {% for r in req_emp_matched %}
+        <tr>
+            <td>{{ r.requirement_id }}</td>
+            <td>{{ r.requirement_name }}</td>
+            <td>{{ r.req_status }}</td>
+            <td>{{ r.category }}</td>
+            <td>{{ r.priority }}</td>
+            <td>{{ r.project_name }}</td>
+            <td>{{ r.domain }}</td>
+            <td>{{ r.team }}</td>
+            <td>{{ r.covered_by }}</td>
+            <td>{{ r.employee_id }}</td>
+            <td>{{ r.employee_name }}</td>
+            <td>{{ r.role }}</td>
+            <td>{{ r.department }}</td>
+            <td>{{ r.seniority }}</td>
+            <td>{{ r.date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+</main>
+
+<script>
+const sortState = {};
+function sortTable(tableId, col) {
+    const table = document.getElementById(tableId);
+    const tbody = table.tBodies[0];
+    const rows  = Array.from(tbody.rows);
+    const asc   = !sortState[tableId + col];
+    sortState[tableId + col] = asc;
+    rows.sort((a, b) => {
+        const va = a.cells[col]?.innerText.trim() || '';
+        const vb = b.cells[col]?.innerText.trim() || '';
+        const na = parseFloat(va), nb = parseFloat(vb);
+        if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+
+function filterTable(tableId, searchId) {
+    const q    = document.getElementById(searchId).value.toLowerCase();
+    const rows = document.getElementById(tableId).tBodies[0].rows;
+    for (const row of rows) {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    }
+}
+
+function exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    const rows  = Array.from(table.rows);
+    const csv   = rows.map(r =>
+        Array.from(r.cells).map(c => '"' + c.innerText.replace(/"/g, '""') + '"').join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+document.querySelectorAll('.resize-handle').forEach(handle => {
+    handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const th = handle.parentElement;
+        const startX = e.pageX, startW = th.offsetWidth;
+        const onMove = mv => { th.style.width = Math.max(50, startW + mv.pageX - startX) + 'px'; };
+        const onUp   = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+});
+</script>
+</body>
+</html>

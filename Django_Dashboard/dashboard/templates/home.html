@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GraphRAG Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('https://static.vecteezy.com/system/resources/previews/024/435/050/large_2x/technologic-linear-background-with-dots-and-lines-in-the-style-of-dark-teal-and-dark-sky-blue-human-connections-32k-uhd-neo-academism-generat-ai-free-photo.jpg');
+            background-size: cover;
+            background-position: center;
+            color: #333;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background-color: rgba(255,255,255,0.85);
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        footer {
+            background-color: rgba(255,255,255,0.85);
+            color: #333;
+            text-align: center;
+            padding: 10px;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
+        }
+        h1 { color: #007BFF; font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .subtitle { font-size: 1.1em; color: #e0e0e0; margin-bottom: 30px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); }
+        .button-container { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+        .card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 14px;
+            padding: 24px 32px;
+            min-width: 220px;
+            text-decoration: none;
+            color: #fff;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.25); }
+        .card h3 { margin: 0 0 8px; font-size: 1.2em; color: #ADD8E6; }
+        .card p  { margin: 0; font-size: 0.85em; color: #ddd; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GraphRAG Data Dashboard</h1>
+    </header>
+    <main>
+        <p class="subtitle">Explore interconnected project, test, and engineering data designed for graph knowledge retrieval.</p>
+        <div class="button-container">
+            <a href="{% url 'index' %}" class="card">
+                <h3>Projects · Tests · Bugs</h3>
+                <p>Browse projects, test cases, and bugs with cross-collection joins.</p>
+            </a>
+            <a href="{% url 'index2' %}" class="card">
+                <h3>Requirements · Employees</h3>
+                <p>Explore requirements mapped to employees and verification ownership.</p>
+            </a>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 GraphRAG Dashboard</p>
+    </footer>
+</body>
+</html>

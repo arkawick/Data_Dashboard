@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Arkajyoti/Downloads/Data_Dashboard -type f | grep -E \"\\\\.\\(html|js|css|xlsx|json\\)$\")",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python generate_data.py)",
+      "Bash(pip install:*)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python generate_excel.py)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python Uploader_Scripts/Base_Uploader_Scripts/upload_all.py)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && \\\\\nfind . -type d -name \"__pycache__\" -exec rm -rf {} + 2>/dev/null; \\\\\nrm -f \"README.md\" \\\\\n      \"Requirements and Instructions.pdf\" \\\\\n      \"Django_Dashboard/All_domains_data/myapp_name/static/script.js\" \\\\\n      \"Django_Dashboard/All_domains_data/myapp_name/tests.py\" \\\\\n      \"Django_Dashboard/All_domains_data/All_domains_data/asgi.py\" && \\\\\nrm -rf \"Django_Dashboard/All_domains_data/myapp_name/static/images\" && \\\\\necho \"Done\")",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard/Django_Dashboard\" && python manage.py check 2>&1)",
+      "Bash(DD=\"C:/Users/Arkajyoti/Downloads/Data_Dashboard/Django_Dashboard\")",
+      "Bash(mv \"$DD/All_domains_data\" \"$DD/config\")",
+      "Bash(mv \"$DD/myapp_name\" \"$DD/dashboard\")",
+      "Read(//c/Users/Arkajyoti/Downloads/Data_Dashboard/Django_Dashboard/**)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python generate_data.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python generate_excel.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python Uploader_Scripts/Base_Uploader_Scripts/upload_all.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python Uploader_Scripts/Comp_Uploader_Scripts/requirements_comp.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard/Django_Dashboard\" && timeout 8 python manage.py runserver 2>&1 || true)",
+      "Bash(python -c \"import networkx; print\\('networkx', networkx.__version__\\)\" 2>&1\npython -c \"import anthropic; print\\('anthropic ok'\\)\" 2>&1\npython -c \"import sklearn; print\\('sklearn ok'\\)\" 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/build_graph.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/chunk_graph.py 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python -c \"\nfrom graphrag.retriever import GraphRetriever\nr = GraphRetriever\\(\\)\nprint\\(f'Loaded {len\\(r.chunks\\)} chunks\\\\n'\\)\n\ntests = [\n    'critical bugs in automotive domain',\n    'which employee leads the most projects',\n    'requirements not covered by test cases',\n    'senior engineers assigned to security tests',\n    'high priority bugs in API Gateway project',\n]\nfor q in tests:\n    results = r.retrieve\\(q, top_k=3\\)\n    print\\(f'Q: {q}'\\)\n    for c in results:\n        print\\(f'  [{c[\\\\\"type\\\\\"]:12}] {c[\\\\\"text\\\\\"][:90]}...'\\)\n    print\\(\\)\n\" 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/query.py \"Which employees are assigned to critical bugs and what projects do those bugs belong to?\" 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/query.py \"Which employees are assigned to critical bugs?\" 2>&1)",
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/load_neo4j.py 2>&1)"
+    ]
+  }
+}
