@@ -87,6 +87,27 @@ class GraphRetriever:
         return "\n\n".join(parts)
 
 
+def get_retriever(chunks_path=CHUNKS_PATH, prefer_semantic=True):
+    """
+    Factory: returns SemanticRetriever (FAISS) if index exists, else GraphRetriever (TF-IDF).
+
+    Usage:
+        from graphrag.retriever import get_retriever
+        r = get_retriever()          # auto-selects best available
+        chunks = r.retrieve("critical bugs", top_k=10)
+    """
+    if prefer_semantic:
+        faiss_path = chunks_path.replace("chunks.json", "chunks.faiss")
+        idmap_path = chunks_path.replace("chunks.json", "id_map.json")
+        if os.path.exists(faiss_path) and os.path.exists(idmap_path):
+            try:
+                from graphrag.semantic_retriever import SemanticRetriever
+                return SemanticRetriever(chunks_path, faiss_path, idmap_path)
+            except ImportError:
+                pass  # sentence-transformers/faiss not installed, fall through
+    return GraphRetriever(chunks_path)
+
+
 if __name__ == "__main__":
     retriever = GraphRetriever()
     print(f"Loaded {len(retriever.chunks)} chunks.\n")

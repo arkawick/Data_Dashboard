@@ -23,7 +23,32 @@
       "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python -c \"\nfrom graphrag.retriever import GraphRetriever\nr = GraphRetriever\\(\\)\nprint\\(f'Loaded {len\\(r.chunks\\)} chunks\\\\n'\\)\n\ntests = [\n    'critical bugs in automotive domain',\n    'which employee leads the most projects',\n    'requirements not covered by test cases',\n    'senior engineers assigned to security tests',\n    'high priority bugs in API Gateway project',\n]\nfor q in tests:\n    results = r.retrieve\\(q, top_k=3\\)\n    print\\(f'Q: {q}'\\)\n    for c in results:\n        print\\(f'  [{c[\\\\\"type\\\\\"]:12}] {c[\\\\\"text\\\\\"][:90]}...'\\)\n    print\\(\\)\n\" 2>&1)",
       "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/query.py \"Which employees are assigned to critical bugs and what projects do those bugs belong to?\" 2>&1)",
       "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/query.py \"Which employees are assigned to critical bugs?\" 2>&1)",
-      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/load_neo4j.py 2>&1)"
+      "Bash(cd \"C:/Users/Arkajyoti/Downloads/Data_Dashboard\" && python graphrag/load_neo4j.py 2>&1)",
+      "Bash(docker --version)",
+      "Bash(docker compose:*)",
+      "Bash(pip list:*)",
+      "Bash(mongosh --eval \"db.runCommand\\(''''ping''''\\).ok\" --quiet)",
+      "Bash(docker ps:*)",
+      "Bash(netstat -ano)",
+      "Bash(python manage.py check)",
+      "Bash(uvicorn graphrag.api:app --host 0.0.0.0 --port 8001 --reload)",
+      "Bash(curl -s http://localhost:8001/health)",
+      "Bash(curl -s -o /dev/null -w \"Django: %{http_code}\" http://localhost:8002/)",
+      "Bash(celery -A graphrag.tasks worker --loglevel=info --concurrency=1 --pool=solo)",
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}' http://localhost:8002/)",
+      "Bash(python -c \":*)",
+      "Bash(\"/c/Users/Arkajyoti/Downloads/Data_Dashboard/graphrag/schemas.py\")",
+      "Bash(curl -s -o /dev/null -w \"Django HTTP: %{http_code}\" http://localhost:8002/)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(echo \"VITE_DJANGO_URL=http://localhost:8002:*)",
+      "Bash(\"/c/Users/Arkajyoti/Downloads/Data_Dashboard/frontend/.env\")",
+      "Bash(xargs cat:*)"
     ]
   }
 }

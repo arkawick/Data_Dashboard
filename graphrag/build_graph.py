@@ -18,8 +18,8 @@ from datetime import datetime
 import networkx as nx
 from pymongo import MongoClient
 
-MONGO_URI  = "mongodb://localhost:27017/"
-DB_NAME    = "test_db"
+MONGO_URI  = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+DB_NAME    = os.environ.get("DB_NAME",  "test_db")
 OUT_DIR    = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH  = os.path.join(OUT_DIR, "graph.json")
 PICKLE_PATH = os.path.join(OUT_DIR, "graph.gpickle")

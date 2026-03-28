@@ -22,7 +22,7 @@ import sys
 import textwrap
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from graphrag.retriever import GraphRetriever
+from graphrag.retriever import get_retriever
 
 MODEL      = "claude-sonnet-4-6"
 TOP_K      = 20
@@ -157,7 +157,7 @@ EXAMPLE_QUESTIONS = [
 
 
 def main():
-    retriever = GraphRetriever()
+    retriever = get_retriever()
     backend   = detect_backend()
 
     print(f"\nGraphRAG Query Interface")

@@ -1,378 +1,241 @@
 # Future Steps — Production Grade Upgrade Path
 
-This document outlines what to add to the current stack to move from a local prototype
-to a production-grade GraphRAG system.
+All items in the prioritised roadmap have been implemented as of 2026-03-28.
+This document is kept for reference and to describe what remains for full cloud-scale deployment.
+
+---
+
+## Implementation Status
+
+| Priority | Item | Status |
+|---|---|---|
+| 1 | Docker Compose — containerise all services | **Done** |
+| 2 | FastAPI query endpoint | **Done** |
+| 3 | Semantic embeddings + FAISS | **Done** |
+| 4 | Neo4j in query pipeline (hybrid retriever) | **Done** |
+| 5 | Celery + Redis — async graph rebuilds | **Done** |
+| 6 | JWT auth in Django | **Done** |
+| 7 | GitHub Actions CI/CD | **Done** |
+| 8 | Prometheus + Grafana | **Done** |
+| 9 | Jenkinsfile | **Done** |
+| 10 | Airflow DAG — nightly pipeline | **Done** |
+| 11 | React SPA frontend | **Done** |
+| 12 | Kafka ingestion — real-time event stream | Not implemented |
 
 ---
 
 ## Current Stack
 
 ```
-MongoDB  ->  NetworkX  ->  TF-IDF  ->  Django  ->  Neo4j
-                                    ->  query.py (Claude / Ollama)
+[Airflow / Celery Beat]          <- nightly schedule
+        |
+    MongoDB
+        |
+  build_graph.py  -->  NetworkX DiGraph  -->  graph.gpickle
+        |                                -->  graph.json
+  chunk_graph.py  -->  chunks.json
+        |
+  embed_chunks.py -->  chunks.faiss  (FAISS + all-MiniLM-L6-v2)
+        |
+  load_neo4j.py   -->  Neo4j (visualization + hybrid context)
+        |
+  FastAPI (api.py)
+    /query          <-- TF-IDF or FAISS retrieval
+    /query/hybrid   <-- FAISS + Neo4j 2-hop expansion
+    /pipeline/rebuild  <-- triggers Celery chain
+    /metrics           <-- Prometheus scrape
+        |
+  Django (REST + dashboard)
+    /api/*          <-- JWT-protected REST API
+    /index/         <-- server-rendered dashboard (legacy)
+    /metrics        <-- Prometheus scrape
+        |
+  React SPA (Vite + TypeScript)
+    localhost:5173  <-- primary UI
+    /login          <-- JWT login
+    /dashboard      <-- stats + charts
+    /bugs           <-- filterable bug table
+    /test-cases     <-- filterable test case table
+    /projects       <-- filterable project table
+    /requirements   <-- filterable requirements table
+    /employees      <-- filterable employee table
+    /query          <-- GraphRAG query interface (standard + hybrid + chunks)
+        |
+  Prometheus + Grafana  <-- request latency, error rates, token usage
+        |
+  GitHub Actions / Jenkins  <-- test + build + deploy on push
 ```
 
 ---
 
-## Layer 1 — Data Ingestion & Pipeline
+## What Remains (not yet implemented)
 
-**Problem:** Data only enters via Excel upload or `generate_data.py`. Production needs
-scheduled, validated, reliable ingestion.
+### Kafka ingestion
 
-| Tool | Purpose |
+Real-time event streaming — bugs/test results written to Kafka topics, consumed into MongoDB.
+Only needed if data volumes require sub-second ingestion latency.
+
+High effort, high infrastructure overhead. Use only if:
+- External systems (Jira, CI tools) need to push events in real time
+- Data refresh frequency needs to be higher than the nightly Airflow schedule
+
+Recommended approach when needed:
+```
+External system  ->  Kafka topic  ->  Kafka consumer  ->  MongoDB
+                                   (Python consumer using confluent-kafka)
+```
+
+### Cloud deployment
+
+The Docker Compose setup runs locally. To deploy to cloud:
+
+| Component | Cloud option |
 |---|---|
-| **Apache Airflow** | Schedule pipelines — nightly MongoDB refresh, graph rebuild, re-chunking |
-| **Apache Kafka** | Real-time event streaming — bugs/test results written to Kafka, consumed into MongoDB |
-| **dbt** | Data transformation layer — clean, validate, and model raw MongoDB data before graph build |
-| **Great Expectations** | Data quality checks — validate FK integrity, enum values, null rates before insert |
-
----
-
-## Layer 2 — Graph & Retrieval
-
-**Problem:** TF-IDF is keyword-only and misses semantic similarity ("critical defect" won't
-match "Critical bug"). Neo4j is running but not integrated into the query pipeline.
-
-| Tool | Purpose |
-|---|---|
-| **Neo4j as primary graph store** | Replace `graph.gpickle` — live Cypher queries instead of a pickled snapshot |
-| **Sentence Transformers / Voyage AI** | Replace TF-IDF with vector embeddings for semantic retrieval |
-| **FAISS or Chroma** | Vector index over chunk embeddings — sub-millisecond ANN search |
-| **LlamaIndex Knowledge Graph Index** | Higher-level GraphRAG framework wrapping Neo4j + vector store together |
-
-**Upgraded retrieval pipeline:**
-```
-Question -> embed -> FAISS ANN search  -> top-K chunks  \
-         -> Cypher on Neo4j            -> graph context  --> merge -> LLM
-```
-
----
-
-## Layer 3 — LLM & API Layer
-
-**Problem:** `query.py` is a CLI script. Production needs a proper API, streaming responses,
-session memory, and cost control.
-
-| Tool | Purpose |
-|---|---|
-| **FastAPI** | REST + WebSocket API for the query interface (replaces CLI script) |
-| **LangChain or LlamaIndex** | Chain management, conversation memory, tool use, ReAct agents over the graph |
-| **LangSmith / Arize Phoenix** | LLM observability — trace every retrieval, prompt, and LLM response |
-| **Redis** | Cache frequent query results, store conversation history per session |
-| **Token budget / rate limiting** | Control API spend per user or session |
-
----
-
-## Layer 4 — Web Application
-
-**Problem:** Django dashboard has no auth, no REST API, no async, and is a read-only viewer.
-
-| Tool | Purpose |
-|---|---|
-| **Django REST Framework (DRF)** | Proper REST API with serializers, viewsets, and pagination |
-| **Django Channels + WebSockets** | Stream LLM responses to the browser in real time |
-| **JWT / OAuth2 (django-allauth)** | Authentication and role-based access control |
-| **Celery + Redis** | Async task queue — run graph rebuilds and chunk regeneration in background |
-| **React or Next.js** (optional) | Replace server-rendered templates with a proper SPA frontend |
-
----
-
-## Layer 5 — Infrastructure & Deployment
-
-**Problem:** Everything runs on localhost with no isolation, no scaling, and no fault tolerance.
-
-| Tool | Purpose |
-|---|---|
-| **Docker + Docker Compose** | Containerise all services — MongoDB, Neo4j, Redis, Django, FastAPI |
-| **Nginx** | Reverse proxy, SSL termination, static file serving |
-| **Kubernetes (K8s)** | Orchestration, auto-scaling, rolling deploys (when cloud scale is needed) |
-| **GitHub Actions** | CI/CD — run tests, build Docker images, deploy on push |
-| **HashiCorp Vault / AWS Secrets Manager** | Secrets management — no hardcoded credentials in code |
-
----
-
-## Layer 6 — Observability
-
-**Problem:** Currently zero visibility into system health, query latency, or errors.
-
-| Tool | Purpose |
-|---|---|
-| **Prometheus + Grafana** | Metrics — query latency, retrieval times, LLM token usage, error rates |
-| **Loki** | Log aggregation (lightweight alternative to ELK stack) |
-| **Sentry** | Error tracking and alerting for Django and FastAPI |
-| **OpenTelemetry** | Distributed tracing across MongoDB, Neo4j, Redis, and LLM calls |
-
----
-
-## Target Architecture
-
-```
-                     [Airflow / Kafka]
-                            |
-                        MongoDB
-                            |
-                  build_graph.py (scheduled)
-                    /              \
-              Neo4j             chunk_graph.py
-                |                      |
-         Cypher queries          Embeddings (Voyage AI)
-                 \                    /
-                  FAISS / Chroma index
-                            |
-                       FastAPI (query API)
-                      /      |      \
-                LangChain  Redis   LangSmith
-                            |
-                       Django + DRF
-                      (dashboard + auth)
-                            |
-                          Nginx
-                            |
-                    React / Next.js frontend
-                            |
-                Prometheus / Grafana / Sentry
-```
-
----
-
-## Prioritised Roadmap
-
-Work through these roughly in order — each step is independently useful.
-
-| Priority | Add | Effort | Impact |
-|---|---|---|---|
-| 1 | **Docker Compose** — containerise all services | Low | Reproducible, shareable environment |
-| 2 | **FastAPI query endpoint** — expose GraphRAG as an API | Low | Makes the system callable from anything |
-| 3 | **Semantic embeddings + FAISS** — replace TF-IDF | Medium | Much better retrieval quality |
-| 4 | **Neo4j in query pipeline** — live Cypher for multi-hop context | Medium | Graph-aware, multi-hop LLM answers |
-| 5 | **Celery + Redis** — async graph rebuilds | Medium | Non-blocking data refresh |
-| 6 | **JWT auth in Django** — multi-user access control | Medium | Secure, role-based dashboard |
-| 7 | **LangSmith tracing** — LLM observability | Low | Full visibility into retrieval and prompts |
-| 8 | **Airflow DAG** — nightly graph rebuild pipeline | High | Automated data freshness |
-| 9 | **Prometheus + Grafana** — system health monitoring | Medium | Latency, error rate, token usage dashboards |
-| 10 | **Jenkins** — CI/CD pipeline for code and deployments | Medium | Automated test, build, deploy on every git push |
-| 11 | **n8n** — event-driven workflow automation | Low | Trigger pipelines from Jira, Slack, S3, file uploads |
-| 12 | **Kafka ingestion** — real-time event stream | High | Live bug/test result ingestion (only if needed) |
-
----
-
-## Layer 7 — Automation & CI/CD: n8n and Jenkins
-
-Both tools are applicable to this project but serve different roles. They are complementary,
-not competing — you would typically use both.
-
----
-
-### n8n — Workflow Automation (Data & Event Triggers)
-
-**What it is:** A self-hosted, low-code workflow automation tool (like Zapier but open source).
-It connects services via a visual node editor and can react to events, webhooks, schedules,
-and file system changes.
-
-**How it fits this project:**
-
-| Use case | n8n workflow |
-|---|---|
-| Excel file dropped in a folder or S3 bucket | Trigger -> run uploader script -> notify Slack |
-| Jira/GitHub issue created | Webhook -> insert bug into MongoDB -> trigger graph rebuild |
-| Nightly data refresh | Schedule -> `generate_data.py` -> `build_graph.py` -> `chunk_graph.py` -> `load_neo4j.py` |
-| Graph rebuild completes | Trigger -> send email/Slack summary with node/edge counts |
-| Django API query logged | Webhook -> log to external analytics tool |
-| New Excel uploaded via dashboard | HTTP trigger -> run uploader -> confirm in UI |
-
-**Example n8n pipeline for nightly graph rebuild:**
-```
-[Cron: 2am] -> [SSH/Execute: python generate_data.py]
-            -> [SSH/Execute: python graphrag/build_graph.py]
-            -> [SSH/Execute: python graphrag/chunk_graph.py]
-            -> [SSH/Execute: python graphrag/load_neo4j.py]
-            -> [Slack: "Graph rebuilt: 365 nodes, 1045 edges"]
-```
-
-**Setup:**
-```bash
-# Docker
-docker run -p 5678:5678 -v ~/.n8n:/home/node/.n8n n8nio/n8n
-
-# Open http://localhost:5678
-```
-
-**Best for:** Non-engineers triggering pipelines, event-driven ingestion, integrating with
-external tools (Jira, GitHub, Slack, SharePoint, S3) without writing glue code.
-
----
-
-### Jenkins — CI/CD (Code, Build, Deploy)
-
-**What it is:** A self-hosted CI/CD automation server. Runs pipelines defined as code
-(Jenkinsfile) triggered by git events or on a schedule.
-
-**How it fits this project:**
-
-| Use case | Jenkins pipeline stage |
-|---|---|
-| Code pushed to main branch | Run tests -> build Docker images -> deploy Django + FastAPI |
-| `generate_data.py` changed | Run data integrity checks, verify FK relationships |
-| `graphrag/` scripts changed | Rebuild graph, re-chunk, validate chunk count matches expected |
-| Pull request opened | Run linting (flake8/ruff) + unit tests |
-| Nightly | Full pipeline: data refresh -> graph build -> chunk -> Neo4j reload |
-| Docker image built | Push to registry (Docker Hub / ECR / GCR) |
-
-**Example Jenkinsfile:**
-```groovy
-pipeline {
-    agent any
-
-    triggers {
-        cron('H 2 * * *')   // nightly at 2am
-    }
-
-    stages {
-        stage('Checkout') {
-            steps { git 'https://github.com/yourorg/data-dashboard' }
-        }
-
-        stage('Test') {
-            steps { sh 'python -m pytest tests/' }
-        }
-
-        stage('Refresh Data') {
-            steps { sh 'python generate_data.py' }
-        }
-
-        stage('Build Graph') {
-            steps {
-                sh 'python graphrag/build_graph.py'
-                sh 'python graphrag/chunk_graph.py'
-            }
-        }
-
-        stage('Load Neo4j') {
-            steps { sh 'python graphrag/load_neo4j.py' }
-        }
-
-        stage('Deploy') {
-            steps { sh 'docker compose up -d --build' }
-        }
-    }
-
-    post {
-        success { slackSend message: "Pipeline passed. Graph rebuilt successfully." }
-        failure { slackSend message: "Pipeline FAILED. Check Jenkins logs." }
-    }
-}
-```
-
-**Setup:**
-```bash
-# Docker
-docker run -p 8080:8080 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
-
-# Open http://localhost:8080
-```
-
-**Best for:** Engineers managing code deployments, running tests on every commit,
-building and pushing Docker images, enforcing quality gates before deploy.
-
----
-
-### n8n vs Jenkins — When to Use Which
-
-| Scenario | Use |
-|---|---|
-| Trigger pipeline from a Slack message or form | n8n |
-| Trigger pipeline on git push / PR merge | Jenkins |
-| Connect to Jira, SharePoint, S3, or Slack | n8n |
-| Build and push Docker images | Jenkins |
-| Non-technical user needs to run a data refresh | n8n (UI-based trigger) |
-| Enforce test passing before deploy | Jenkins |
-| Event-driven ingestion (webhook from external system) | n8n |
-| Nightly scheduled full pipeline with stages | Either (Jenkins more robust) |
-| Low infrastructure overhead | n8n (simpler setup) |
-
-**Recommended setup for this project:**
-- **n8n** handles event-driven data ingestion — external triggers, Excel uploads, Jira webhooks
-- **Jenkins** handles code CI/CD — test, build Docker, deploy on git push
-
----
-
-## Quick Wins (Start Here)
-
-These three alone move the project from a local prototype to something deployable:
-
-### 1. Docker Compose
+| MongoDB | MongoDB Atlas (managed) |
+| Neo4j | Neo4j AuraDB (managed free tier) |
+| Redis | AWS ElastiCache or Upstash |
+| Django + FastAPI | AWS ECS, GCP Cloud Run, or Kubernetes |
+| Celery workers | Same ECS/K8s cluster |
+| Airflow | AWS MWAA or Astronomer |
+| Monitoring | Grafana Cloud (free tier) |
+| React frontend | Vercel, Netlify, or S3 + CloudFront |
+
+### Nginx (for production HTTP)
+
+Add Nginx as a reverse proxy in front of Django and to serve the React build:
+- SSL/TLS termination
+- Static file serving (`/static/` and React `dist/`)
+- Rate limiting
 
 ```yaml
-# docker-compose.yml (outline)
-services:
-  mongo:
-    image: mongo:7
-    ports: ["27017:27017"]
-
-  neo4j:
-    image: neo4j:5
-    ports: ["7474:7474", "7687:7687"]
-    environment:
-      NEO4J_AUTH: neo4j/password
-
-  redis:
-    image: redis:7
-    ports: ["6379:6379"]
-
-  django:
-    build: ./Django_Dashboard
-    ports: ["8000:8000"]
-    depends_on: [mongo, redis]
-
-  fastapi:
-    build: ./graphrag
-    ports: ["8001:8001"]
-    depends_on: [mongo, neo4j, redis]
+# Add to docker-compose.yml
+nginx:
+  image: nginx:alpine
+  ports: ["80:80", "443:443"]
+  volumes:
+    - ./nginx.conf:/etc/nginx/nginx.conf
+    - ./Django_Dashboard/staticfiles:/static
+    - ./frontend/dist:/usr/share/nginx/html
+  depends_on: [django, fastapi]
 ```
 
-### 2. FastAPI query endpoint
+### Vector store upgrade (optional)
 
-```python
-# graphrag/api.py
-from fastapi import FastAPI
-from graphrag.retriever import GraphRetriever
+The current FAISS index uses `all-MiniLM-L6-v2` (384 dimensions, fast, general-purpose).
+For higher retrieval quality on technical text:
 
-app = FastAPI()
-retriever = GraphRetriever()
+| Option | Model | Notes |
+|---|---|---|
+| Voyage AI | `voyage-3` | Best for technical/code content, API-based |
+| OpenAI | `text-embedding-3-small` | Good balance of quality and cost |
+| Local | `bge-large-en-v1.5` | Best open-source, requires more RAM |
 
-@app.get("/query")
-def query(q: str, top_k: int = 20):
-    chunks = retriever.retrieve(q, top_k=top_k)
-    context = "\n\n".join(f"[{i+1}] {c['text']}" for i, c in enumerate(chunks))
-    return {"question": q, "chunks": chunks, "context": context}
-```
+To upgrade: change `MODEL_NAME` in `graphrag/embed_chunks.py` and re-run it.
 
-Run with: `uvicorn graphrag.api:app --port 8001`
+### LangSmith / Arize tracing
 
-### 3. FAISS semantic index (replaces TF-IDF)
+LLM observability — trace every retrieval, prompt, and LLM response.
 
 ```bash
-pip install faiss-cpu sentence-transformers
+pip install langsmith
+export LANGCHAIN_API_KEY=ls__...
+export LANGCHAIN_TRACING_V2=true
 ```
 
+Works without changing application code when using LangChain. For direct Anthropic calls,
+wrap `ask_claude()` in `graphrag/query.py` with a LangSmith trace decorator.
+
+### Sentry error tracking
+
+```bash
+pip install sentry-sdk
+```
+
+In `Django_Dashboard/config/settings.py`:
 ```python
-from sentence_transformers import SentenceTransformer
-import faiss, json, numpy as np
-
-model = SentenceTransformer("all-MiniLM-L6-v2")
-chunks = json.load(open("graphrag/chunks.json"))
-texts = [c["text"] for c in chunks]
-
-embeddings = model.encode(texts, show_progress_bar=True)
-embeddings = np.array(embeddings).astype("float32")
-
-index = faiss.IndexFlatL2(embeddings.shape[1])
-index.add(embeddings)
-faiss.write_index(index, "graphrag/chunks.faiss")
-
-# Query
-def semantic_retrieve(question, top_k=20):
-    q_emb = model.encode([question]).astype("float32")
-    _, indices = index.search(q_emb, top_k)
-    return [chunks[i] for i in indices[0]]
+import sentry_sdk
+sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN", ""), traces_sample_rate=1.0)
 ```
+
+In `graphrag/api.py`:
+```python
+import sentry_sdk
+sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN", ""))
+```
+
+---
+
+## Layer Reference
+
+### Layer 1 — Data Ingestion
+
+| Tool | Status | Purpose |
+|---|---|---|
+| Direct insert (`generate_data.py`) | Done | Dev reset + quick seed |
+| Excel uploader | Done | Manual data entry |
+| Airflow DAG | Done | Nightly scheduled pipeline |
+| Celery tasks | Done | On-demand async pipeline |
+| Apache Kafka | Not implemented | Real-time event streaming |
+| dbt | Not implemented | Data transformation layer |
+| Great Expectations | Not implemented | Data quality validation |
+
+### Layer 2 — Graph & Retrieval
+
+| Tool | Status | Purpose |
+|---|---|---|
+| NetworkX (graph.gpickle) | Done | In-memory graph snapshot |
+| TF-IDF retriever | Done | Keyword-based chunk retrieval |
+| FAISS + sentence-transformers | Done | Semantic chunk retrieval |
+| Neo4j (visualization) | Done | Visual graph browser |
+| Neo4j (query pipeline) | Done | 2-hop Cypher context expansion |
+| Hybrid retriever | Done | FAISS + Neo4j merged |
+| LlamaIndex Knowledge Graph | Not implemented | Higher-level GraphRAG framework |
+
+### Layer 3 — LLM & API
+
+| Tool | Status | Purpose |
+|---|---|---|
+| FastAPI | Done | REST API for all query modes |
+| Claude backend | Done | Live LLM answers via API |
+| Ollama backend | Done | Local LLM answers |
+| Dry-run mode | Done | No API key needed |
+| Redis (result cache) | Done (broker only) | Cache not yet implemented |
+| LangChain/LlamaIndex | Not implemented | Chain management + agents |
+| LangSmith | Not implemented | LLM observability |
+
+### Layer 4 — Web Application
+
+| Tool | Status | Purpose |
+|---|---|---|
+| Django dashboard (server-rendered) | Done | Legacy HTML views |
+| JWT authentication | Done | Token-based auth |
+| REST API | Done | Paginated JSON endpoints |
+| Prometheus middleware | Done | Request metrics |
+| CORS | Done | Cross-origin support for React |
+| Celery + Redis | Done | Async task queue |
+| React SPA (Vite + TypeScript) | Done | Primary frontend |
+| TanStack Query | Done | Data fetching + caching |
+| Recharts | Done | Interactive charts |
+| Django Channels | Not implemented | WebSocket streaming |
+
+### Layer 5 — Infrastructure
+
+| Tool | Status | Purpose |
+|---|---|---|
+| Docker Compose | Done | Local containerised deployment |
+| Nginx | Not implemented | Reverse proxy + SSL |
+| GitHub Actions | Done | CI/CD on push |
+| Jenkins | Done | Self-hosted CI/CD |
+| Kubernetes | Not implemented | Cloud orchestration + autoscaling |
+| Vault / Secrets Manager | Not implemented | Production secrets management |
+
+### Layer 6 — Observability
+
+| Tool | Status | Purpose |
+|---|---|---|
+| Prometheus | Done | Metrics collection |
+| Grafana | Done | Metrics dashboards |
+| Sentry | Not implemented | Error tracking |
+| LangSmith / Arize | Not implemented | LLM trace observability |
+| Loki / ELK | Not implemented | Log aggregation |
+| OpenTelemetry | Not implemented | Distributed tracing |

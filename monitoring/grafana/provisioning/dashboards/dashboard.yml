@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: GraphRAG Dashboards
+    folder: GraphRAG
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards

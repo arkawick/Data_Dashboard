@@ -1,0 +1,209 @@
+version: "3.9"
+
+services:
+
+  # ── Data stores ──────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: dashboard_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5
+    container_name: dashboard_neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/password
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7474"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dashboard_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Application services ──────────────────────────────────────────────────────
+  django:
+    build:
+      context: ./Django_Dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard_django
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./Django_Dashboard:/app
+    restart: unless-stopped
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dashboard_fastapi
+    command: uvicorn graphrag.api:app --host 0.0.0.0 --port 8001 --workers 2
+    ports:
+      - "8001:8001"
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./graphrag:/app/graphrag
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dashboard_celery_worker
+    command: celery -A graphrag.tasks worker --loglevel=info --concurrency=2
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./graphrag:/app/graphrag
+      - .:/app
+    restart: unless-stopped
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dashboard_celery_beat
+    command: celery -A graphrag.tasks beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./graphrag:/app/graphrag
+    restart: unless-stopped
+
+  # ── Observability ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: dashboard_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: dashboard_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ── Airflow ───────────────────────────────────────────────────────────────────
+  airflow-init:
+    image: apache/airflow:2.10.0-python3.12
+    container_name: dashboard_airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate &&
+        airflow users create --username admin --password admin \
+          --firstname Admin --lastname User --role Admin \
+          --email admin@example.com || true
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_data:/opt/airflow
+    restart: "no"
+
+  airflow-webserver:
+    image: apache/airflow:2.10.0-python3.12
+    container_name: dashboard_airflow_web
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_data:/opt/airflow
+      - .:/app
+    depends_on:
+      - airflow-init
+      - mongo
+      - neo4j
+    restart: unless-stopped
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.0-python3.12
+    container_name: dashboard_airflow_scheduler
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_data:/opt/airflow
+      - .:/app
+    depends_on:
+      - airflow-init
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  neo4j_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  airflow_data:

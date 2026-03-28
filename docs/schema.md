@@ -1,6 +1,7 @@
 # Data Schema
 
-All collections live in MongoDB database **`test_db`** at `localhost:27017`.
+All collections live in MongoDB database **`test_db`** at `localhost:27017`
+(configurable via `MONGO_URI` and `DB_NAME` environment variables).
 
 Every record has a `date` field (Python `datetime`) appended automatically by the uploader.
 The `_id` field is MongoDB's auto-generated ObjectId and is never included in Excel files.
@@ -202,6 +203,38 @@ duplicated denormalised across collections:
 | `verification_responsibility` | `employees.name` | `requirements` |
 | `project_name` | `projects.project_name` | `test_cases`, `bugs`, `requirements` |
 | `test_case_name` | `test_cases.test_case_name` | `bugs`, `requirements` |
+
+---
+
+---
+
+### `users` — auth collection (no fixed count)
+
+Managed by `dashboard/auth_views.py`. Used for JWT authentication on the Django REST API.
+
+| Field | Type | Notes |
+|---|---|---|
+| `username` | string | Unique login name |
+| `password_hash` | string | bcrypt hash — never stored in plain text |
+| `role` | string | `admin` or `viewer` |
+| `created_at` | string | ISO datetime |
+
+Create users via Django shell:
+```python
+from dashboard.auth_views import create_user
+create_user("admin", "changeme", role="admin")
+create_user("readonly", "pass", role="viewer")
+```
+
+Or via the REST API (admin token required):
+```bash
+curl -X POST http://localhost:8000/api/auth/register/ \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "secret", "role": "viewer"}'
+```
+
+The React frontend login page authenticates against this collection via `/api/auth/login/`.
 
 ---
 

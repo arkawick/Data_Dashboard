@@ -1,0 +1,71 @@
+name: Nightly Pipeline
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # 2:00 AM UTC daily
+  workflow_dispatch:        # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  rebuild-graph:
+    name: Nightly graph rebuild
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - "27017:27017"
+        options: >-
+          --health-cmd "mongosh --eval \"db.runCommand('ping').ok\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pymongo networkx openpyxl
+
+      - name: Seed MongoDB
+        run: python generate_data.py
+        env:
+          MONGO_URI: mongodb://localhost:27017/
+          DB_NAME: test_db
+
+      - name: Build graph
+        run: python graphrag/build_graph.py
+        env:
+          MONGO_URI: mongodb://localhost:27017/
+          DB_NAME: test_db
+
+      - name: Chunk graph
+        run: python graphrag/chunk_graph.py
+
+      - name: Validate chunk count
+        run: python -c "
+import json
+chunks = json.load(open('graphrag/chunks.json'))
+assert len(chunks) >= 1000, f'Chunk count too low: {len(chunks)}'
+print(f'Chunk validation passed: {len(chunks)} chunks')
+"
+
+      - name: Embed chunks (optional - skip if no sentence-transformers)
+        continue-on-error: true
+        run: |
+          pip install faiss-cpu sentence-transformers && python graphrag/embed_chunks.py
+
+      - name: Summary
+        run: |
+          echo "Graph rebuild complete."
+          python -c "
+import json, os
+g = json.load(open('graphrag/graph.json'))
+s = g.get('stats', {})
+print(f\"  Nodes : {s.get('nodes', '?')}\")
+print(f\"  Edges : {s.get('edges', '?')}\")
+"

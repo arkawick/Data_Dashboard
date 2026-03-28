@@ -217,10 +217,46 @@ To add a new Excel source, add a new entry to `FILE_PATTERNS`.
 
 Default: `mongodb://localhost:27017/`, database `test_db`.
 
-To change, update `MONGO_URI` and `DB_NAME` in:
-- `generate_data.py`
-- `uploader.py`
-- Each script in `Uploader_Scripts/Base_Uploader_Scripts/`
-- Each script in `Uploader_Scripts/Comp_Uploader_Scripts/`
+All connection strings now read from environment variables:
+
+```bash
+# .env (copy from .env.example)
+MONGO_URI=mongodb://localhost:27017/
+DB_NAME=test_db
+```
+
+The following files all respect these env vars automatically:
 - `Django_Dashboard/dashboard/mongo_utils.py`
 - `graphrag/build_graph.py`
+- `graphrag/tasks.py` (Celery tasks)
+- `airflow/dags/graphrag_pipeline_dag.py`
+
+The uploader scripts (`generate_data.py`, `uploader.py`, `Uploader_Scripts/`) still use hardcoded defaults.
+To change their connection, edit `MONGO_URI` / `DB_NAME` at the top of each script,
+or set the environment variables before running them.
+
+When running in Docker Compose, services connect to each other using the service name as hostname:
+```bash
+MONGO_URI=mongodb://mongo:27017/    # 'mongo' = Docker service name
+```
+
+---
+
+## Rebuilding the GraphRAG pipeline after upload
+
+After uploading new data, rebuild the graph so the React frontend and FastAPI query API
+reflect the latest records:
+
+```bash
+# Option A — manual
+python graphrag/build_graph.py
+python graphrag/chunk_graph.py
+python graphrag/embed_chunks.py   # only if using FAISS
+python graphrag/load_neo4j.py     # only if using Neo4j hybrid
+
+# Option B — via API (queues Celery task chain)
+curl -X POST http://localhost:8001/pipeline/rebuild
+
+# Option C — via React frontend
+# Dashboard -> Rebuild Pipeline button (triggers the same Celery chain)
+```

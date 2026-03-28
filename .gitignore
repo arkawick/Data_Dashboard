@@ -1,0 +1,49 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Generated GraphRAG artifacts
+graphrag/graph.gpickle
+graphrag/chunks.faiss
+graphrag/id_map.json
+
+# Keep graph.json and chunks.json (small, useful in repo)
+# graphrag/graph.json
+# graphrag/chunks.json
+
+# Django
+Django_Dashboard/staticfiles/
+*.sqlite3
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Excel input data (usually large or sensitive)
+input_folder/*.xlsx
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
